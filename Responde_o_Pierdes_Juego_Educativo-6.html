@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Responde o Pierdes - Juego educativo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#7c3aed,#06b6d4,#22c55e);min-height:100vh;color:#172033}
+.wrap{max-width:980px;margin:auto;padding:18px}.card{background:#ffffffee;border-radius:24px;padding:22px;box-shadow:0 15px 45px #0003}
+h1{margin:0;color:#6d28d9;font-size:clamp(28px,6vw,48px)}h2{margin:6px 0 14px}.sub{color:#4b5563}
+.row{display:flex;gap:10px;flex-wrap:wrap}.field{flex:1;min-width:180px}label{display:block;font-weight:700;margin:8px 0 5px}
+input,textarea,select{width:100%;padding:12px;border:2px solid #ddd;border-radius:12px;font-size:16px}textarea{min-height:105px;resize:vertical}
+button{border:0;border-radius:13px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:16px;background:#e9d5ff}button.primary{background:#7c3aed;color:white}button.green{background:#16a34a;color:white}button.red{background:#ef4444;color:white}
+.hidden{display:none}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0}.stat{padding:13px;border-radius:15px;background:#f3f4f6;font-weight:700}.arena{position:relative;height:360px;border-radius:22px;overflow:hidden;background:linear-gradient(#dff7ff 0 35%,#28a9df 35%);border:3px solid #fff;margin:12px 0}.waves{position:absolute;inset:35% 0 0;background:repeating-linear-gradient(-8deg,#ffffff38 0 10px,transparent 10px 28px)}
+.players{position:absolute;bottom:18px;left:0;right:0;display:flex;justify-content:space-around;align-items:end;gap:10px;padding:10px}.person{text-align:center;min-width:70px}.avatar{font-size:34px}.stack{display:flex;flex-direction:column-reverse;align-items:center;min-height:8px}.block{width:76px;height:18px;background:#d97706;border:2px solid #92400e;border-radius:5px;margin:1px}.danger{color:#b91c1c;font-weight:800}.question{font-size:22px;font-weight:900;color:#312e81;margin:12px 0}.subject{display:inline-block;padding:6px 10px;border-radius:999px;background:#fde68a;font-weight:800}.notice{min-height:26px;margin:10px 0;font-weight:800}.rules{background:#eef2ff;border-radius:16px;padding:14px;margin-top:14px}.small{font-size:13px;color:#6b7280}
+@media(max-width:600px){.arena{height:330px}.players{flex-wrap:wrap}.person{min-width:45%}.block{width:62px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>🌊 Responde o Pierdes</h1>
+<p class="sub">Juego educativo de preguntas y respuestas para varios jugadores.</p>
+
+<section id="setup">
+<div class="row">
+<div class="field"><label>Jugador 1</label><input id="p1" placeholder="Nombre"></div>
+<div class="field"><label>Jugador 2</label><input id="p2" placeholder="Nombre"></div>
+<div class="field"><label>Jugador 3</label><input id="p3" placeholder="Nombre"></div>
+<div class="field"><label>Jugador 4</label><input id="4" placeholder="Nombre"></div>
+</div>
+<div class="rules">
+<b>¿Cómo se juega?</b>
+<ul>
+<li>Cada jugador responde una pregunta de una materia.</li>
+<li>Respuesta corta: pierde un bloque/vida.</li>
+<li>Respuesta completa: gana 1 bloque.</li>
+<li>Respuesta muy desarrollada: gana 2 bloques.</li>
+<li>Quien llegue a 8 bloques gana la partida.</li>
+<li>Si un jugador pierde sus 3 vidas, queda eliminado.</li>
+</ul>
+</div>
+<p style="font-weight:800;color:#6d28d9">👆 Primero escribe los nombres de los jugadores y pulsa “Comenzar partida”. Después aparecerá el cuadro grande para escribir cada respuesta.</p>
+<button class="primary" id="start">🎮 Comenzar partida</button>
+</section>
+
+<section id="game" class="hidden">
+<div class="stats" id="stats"></div>
+<div class="arena"><div class="waves"></div><div class="players" id="players"></div></div>
+<div id="turn" class="sub"></div>
+<div><span class="subject" id="subject"></span></div>
+<div class="question" id="question"></div>
+<div style="background:#fef3c7;border:3px solid #f59e0b;border-radius:15px;padding:12px;margin:12px 0 7px;font-weight:800;color:#92400e">
+✍️ ESCRIBE TU RESPUESTA AQUÍ
+</div>
+<textarea id="answer" placeholder="Toca aquí y escribe tu respuesta..." aria-label="Escribe tu respuesta"></textarea>
+<div class="row" style="margin-top:8px">
+<button class="primary" id="submit">🧱 Enviar respuesta</button>
+<button id="skip">⏭️ Pasar</button>
+</div>
+<div class="notice" id="notice" aria-live="polite"></div>
+<div class="small">La valoración de la respuesta se basa en su desarrollo y en palabras clave de la materia.</div>
+</section>
+
+<section id="end" class="hidden">
+<h2>🏆 ¡Partida terminada!</h2><div id="winner"></div>
+<button class="green" id="again">🔄 Jugar otra vez</button>
+</section>
+</div></div>
+
+<script>
+const bank=[
+["Matemáticas","¿Qué es una ecuación y para qué sirve?",["ecuación","igualdad","incógnita","resolver"]],
+["Matemáticas","Explica cómo calcularías el área de un triángulo.",["base","altura","dos","área"]],
+["Lengua","¿Qué es una metáfora? Da un ejemplo.",["comparación","metáfora","literal","ejemplo"]],
+["Lengua","¿Qué elementos debe tener una buena exposición oral?",["tema","voz","organización","público"]],
+["Ciencias Naturales","¿Qué función cumple la fotosíntesis en las plantas?",["luz","clorofila","dióxido","oxígeno","glucosa"]],
+["Ciencias Naturales","¿Qué diferencia hay entre un cambio físico y uno químico?",["físico","químico","sustancia","materia"]],
+["Historia","Menciona dos causas de la Revolución Francesa y explícalas.",["Francia","impuestos","desigualdad","crisis"]],
+["Historia","¿Por qué es importante estudiar la historia?",["pasado","sociedad","comprender","aprendizaje"]],
+["Geografía","¿Qué es el clima y qué factores pueden modificarlo?",["clima","temperatura","precipitación","latitud"]],
+["Inglés","¿Para qué se utiliza el presente simple en inglés?",["present","simple","rutinas","hábitos","verb"]],
+["Formación Ciudadana","¿Qué significa respetar los derechos de otras personas?",["derechos","respeto","libertad","responsabilidad"]],
+["Informática","¿Qué es una contraseña segura y qué características debe tener?",["contraseña","segura","mayúsculas","números","símbolos"]]
+];
+let players=[],turn=0,questions=[],qpos=0;
+const $=id=>document.getElementById(id);
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function setup(){
+ players=[1,2,3,4].map(i=>({name:$("p"+i)?.value.trim()||"Jugador "+i,blocks:0,lives:3,alive:true}));
+ questions=shuffle(bank);turn=0;qpos=0;$("setup").classList.add("hidden");$("game").classList.remove("hidden");next();
+}
+function render(){
+ $("stats").innerHTML=players.map(p=>`<div class="stat">${p.alive?"🟢":"🔴"} ${p.name}<br>🧱 ${p.blocks}/8 &nbsp; ❤️ ${p.lives}</div>`).join("");
+ $("players").innerHTML=players.map(p=>`<div class="person"><div class="avatar">${p.alive?"🧑":"💀"}</div><b>${p.name}</b><div class="stack">${Array.from({length:p.blocks},()=>"<div class='block'></div>").join("")}</div></div>`).join("");
+}
+function next(){
+ let alive=players.filter(p=>p.alive);
+ if(alive.length===1){finish(alive[0]);return}
+ if(!players[turn].alive){turn=(turn+1)%players.length;return next()}
+ let q=questions[qpos%questions.length];qpos++;
+ $("turn").textContent="Turno de: "+players[turn].name;
+ $("subject").textContent=q[0];$("question").textContent=q[1];$("answer").value="";$("notice").textContent="";
+ render();$("answer").focus();
+}
+function evaluate(text,q){
+ let n=text.trim().length, words=q[2].filter(w=>text.toLowerCase().includes(w));
+ if(n<25)return 0;
+ if(n>=140 || words.length>=Math.min(3,q[2].length))return 2;
+ return 1;
+}
+function submit(){
+ let p=players[turn],q=questions[(qpos-1)%questions.length],a=$("answer").value;
+ if(!a.trim()){ $("notice").textContent="⚠️ Escribe una respuesta antes de enviar.";return}
+ let gain=evaluate(a,q);
+ if(gain===0){p.lives--;p.blocks=Math.max(0,p.blocks-1);$("notice").textContent="🌊 Respuesta muy corta. ¡Perdiste un bloque y una vida!";}
+ else{p.blocks=Math.min(8,p.blocks+gain);$("notice").textContent=`🧱 ¡Muy bien! Ganaste ${gain} bloque${gain>1?"s":""}.`;}
+ if(p.lives<=0){p.alive=false;$("notice").textContent+=" 💦 Te ahogaste y quedaste eliminado."}
+ if(p.blocks>=8){finish(p);return}
+ render();turn=(turn+1)%players.length;setTimeout(next,900);
+}
+function skip(){players[turn].lives--;players[turn].blocks=Math.max(0,players[turn].blocks-1);players[turn].alive=players[turn].lives>0;$("notice").textContent="🌊 Pasaste la pregunta: perdiste una vida.";render();turn=(turn+1)%players.length;setTimeout(next,700)}
+function finish(p){$("game").classList.add("hidden");$("end").classList.remove("hidden");$("winner").innerHTML=`<h2>🎉 ${p.name} ganó</h2><p>Terminó con <b>${p.blocks} bloques</b>. ¡Excelente partida!</p>`}
+$("start").onclick=setup;$("submit").onclick=submit;$("skip").onclick=skip;$("again").onclick=()=>location.reload();
+</script>
+</body>
+</html>
